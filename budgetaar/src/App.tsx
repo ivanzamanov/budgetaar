@@ -30,7 +30,6 @@ Chart.register(
 
 function App() {
   const inflowOutflowData = {
-    labels: ["Amount", "Month"],
     datasets: [
       {
         label: "Inflow",
@@ -64,10 +63,14 @@ function App() {
     ],
   };
 
-  const width = MONTHLY.length * 50;
-  const height = 1000;
+  const options = {
+    responsive: true,
+    // animation: false,
+    maintainAspectRatio: true,
+  };
 
-  console.log(inflowOutflowData.datasets[0].data[0]);
+  const width = MONTHLY.length * 50;
+  const height = 500;
   return (
     <MantineProvider defaultColorScheme="light">
       <AppShell>
@@ -77,7 +80,7 @@ function App() {
         <AppShell.Main>
           <ScrollArea
             style={{
-              // width: "100%",
+              width: "100%",
               height: "100%",
             }}
           >
@@ -88,14 +91,7 @@ function App() {
                 height: height,
               }}
             >
-              <Bar
-                data={inflowOutflowData}
-                options={{
-                  responsive: true,
-                  animation: false,
-                  maintainAspectRatio: false,
-                }}
-              />
+              <Bar data={inflowOutflowData} options={options} />
             </Container>
             <Container
               style={{
@@ -104,14 +100,7 @@ function App() {
                 height: height,
               }}
             >
-              <Line
-                data={totalValueData}
-                options={{
-                  responsive: true,
-                  animation: false,
-                  maintainAspectRatio: false,
-                }}
-              />
+              <Line data={totalValueData} options={options} />
             </Container>
             {/* <Outlet /> */}
           </ScrollArea>

@@ -1,15 +1,18 @@
 use anyhow::{Ok, Result};
 use duckdb::{params, Connection};
+use iban::*;
 
 fn main() {
     run().unwrap();
 }
 
 fn run() -> Result<()> {
-    let conn = Connection::open("../duckdb.db")?;
+    let conn = Connection::open("../data.db")?;
 
     prepare_schema(&conn)?;
     read_statements(&conn)?;
+
+    update_counterparty_ibans(&conn)?;
 
     update_monthly_aggregate(&conn)?;
 
@@ -37,6 +40,34 @@ fn prepare_schema(conn: &Connection) -> Result<()> {
     Ok(conn.execute_batch(include_str!("../sql/init.sql"))?)
 }
 
+fn update_counterparty_ibans(conn: &Connection) -> Result<()> {
+    struct Transaction {
+        id: i32,
+        description: String,
+    }
+    let mut stmt =
+        conn.prepare("select id, description from transactions where counterparty_iban is null")?;
+    let transactions = stmt
+        .query_map([], |row| {
+            std::result::Result::Ok(Transaction {
+                id: row.get("id")?,
+                description: row.get("description")?,
+            })
+        })?
+        .filter_map(|t| Some(t.unwrap()))
+        .collect::<Vec<Transaction>>();
+
+    let mut set_counterparty_stmt =
+        conn.prepare("update transactions set counterparty_iban = $1 where id = $2")?;
+    for t in transactions {
+        if let Some(counterparty_iban) = find_valid_iban(&t.description) {
+            set_counterparty_stmt.execute(params![counterparty_iban, t.id])?;
+        }
+    }
+
+    Ok(())
+}
+
 fn read_statements(conn: &Connection) -> Result<()> {
     let read_dir = std::fs::read_dir("../statements")?;
     for file in read_dir.into_iter() {
@@ -44,24 +75,44 @@ fn read_statements(conn: &Connection) -> Result<()> {
         let path_str = file_path.to_str().unwrap();
         println!("Reading {}", path_str);
 
-        let name_parts = file_path
+        let iban = file_path
             .file_stem()
             .and_then(|n| n.to_str())
             .unwrap()
             .split_whitespace()
-            .collect::<Vec<&str>>();
+            .find(|part| part.parse::<Iban>().is_ok())
+            .expect("Could not find IBAN in file name");
 
-        let iban = name_parts[1].to_owned();
         println!("Inferred IBAN: {}", iban);
 
         conn.execute(
-            "create or replace table raw_data as select * from read_csv(?, header = true);",
-            params![path_str],
+            include_str!("../sql/transactions-from-raw-data.sql"),
+            params![path_str, iban],
         )?;
 
-        conn.execute_batch(include_str!("../sql/transactions-from-raw-data.sql"))?;
-
-        println!("Imported {}", path_str);
+        println!("Done");
     }
     Ok(())
+}
+
+fn find_valid_iban(description: &str) -> Option<String> {
+    description
+        .replace("/", " ")
+        .replace("|", " ")
+        .split_whitespace()
+        .find(|part| part.parse::<Iban>().is_ok())
+        .map(|s| s.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_iban() {
+        assert_eq!(
+            find_valid_iban("Нареден SEPA превод 9011194434 - 1004 /SK6111000000002945045506|Такса за Нареден SEPA превод"),
+            Some("SK6111000000002945045506".to_owned())
+        );
+    }
 }

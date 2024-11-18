@@ -9,5 +9,6 @@ select
     ) as total
 from transactions t
 where datetime >= '2022-09-06'
-and not exists (select * from non_spend_transactions nst where nst.reference = t.reference)
+and not exists (select * from ibans i where i.iban = t.counterparty_iban)
+and not exists (select * from excluded_transactions et where et.reference = t.reference)
 group by date order by date asc;

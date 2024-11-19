@@ -7,7 +7,7 @@ import {
 import {
   BarElement,
   CategoryScale,
-  Chart,
+  Chart as ChartJS,
   Colors,
   LinearScale,
   LineElement,
@@ -18,7 +18,7 @@ import { Bar, Line } from "react-chartjs-2";
 import "./App.css";
 import MONTHLY from "./assets/monthly.json";
 
-Chart.register(
+ChartJS.register(
   BarElement,
   LineElement,
   PointElement,
@@ -47,6 +47,14 @@ function App() {
           y: d.outflow,
         })),
       },
+      {
+        label: "Baseline",
+        backgroundColor: "Blue",
+        data: MONTHLY.map((d) => ({
+          x: d.date,
+          y: 5500,
+        })),
+      },
     ],
   };
 
@@ -65,18 +73,15 @@ function App() {
 
   const options = {
     responsive: true,
-    // animation: false,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
   };
 
-  const width = MONTHLY.length * 50;
-  const height = 500;
+  const width = MONTHLY.length * 45;
+  const height = 300;
   return (
     <MantineProvider defaultColorScheme="light">
       <AppShell>
-        <AppShell.Navbar p="md">
-          {/* <Stack>{navLinks}</Stack> */}
-        </AppShell.Navbar>
+        <AppShell.Navbar p="md"></AppShell.Navbar>
         <AppShell.Main>
           <ScrollArea
             style={{
@@ -102,7 +107,6 @@ function App() {
             >
               <Line data={totalValueData} options={options} />
             </Container>
-            {/* <Outlet /> */}
           </ScrollArea>
         </AppShell.Main>
       </AppShell>

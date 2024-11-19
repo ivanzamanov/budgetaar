@@ -18,9 +18,12 @@ create table if not exists ibans (
     description varchar
 );
 
-create table if not exists excluded_transactions (
-    reference varchar not null primary key,
-    description varchar
+create table if not exists major_events (
+    datetime timestamp not null,
+    outflow decimal,
+    description varchar,
+
+    unique (datetime, description)
 );
 
 insert or ignore into ibans (iban, description) values
@@ -34,3 +37,10 @@ insert or ignore into ibans (iban, description) values
 ('DE72501108006231412815', 'Interactive Brokers'),
 ('BG03FINV91502016974616', 'Гараж - Лъчезар Чамбов'),
 ('BG76STSA93000021268009', 'Николай Дойчинов');
+
+insert or replace into major_events (datetime, outflow, description) values
+('2024-07-01', 1000, 'Банско'),
+('2024-07-01', 2100, 'Застраховки кола'),
+('2024-08-01', 8000, 'Мебели Транш 1'),
+('2024-09-01', 2000, 'Почивка Гърция'),
+('2024-10-01', 4000, 'Мебели Транш 2');

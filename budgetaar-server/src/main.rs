@@ -14,9 +14,11 @@ fn run() -> Result<()> {
 
     update_counterparty_ibans(&conn)?;
 
+    update_transaction_streams(&conn)?;
+
     update_monthly_aggregate(&conn)?;
 
-    export_data(&conn, "../budgetaar/src/assets/monthly.json")?;
+    export_data(&conn, "../budgetaar-web/src/assets/monthly.json")?;
 
     Ok(())
 }
@@ -102,6 +104,11 @@ fn find_valid_iban(description: &str) -> Option<String> {
         .split_whitespace()
         .find(|part| part.parse::<Iban>().is_ok())
         .map(|s| s.to_owned())
+}
+
+fn update_transaction_streams(conn: &Connection) -> Result<()> {
+    conn.execute_batch(include_str!("../sql/update-heuristic-streams.sql"))?;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -9,6 +9,7 @@ create table if not exists transactions (
     outflow decimal,
     contragent varchar,
     description varchar,
+    stream varchar,
 
     unique (datetime, reference)
 );

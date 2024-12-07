@@ -1,0 +1,9 @@
+datasources:
+  - name: API
+    id: 1
+    uid: ce64dl6x7vt34c
+    type: yesoreyeram-infinity-datasource
+    typeName: "Infinity"
+    typeLogoUrl: public/plugins/yesoreyeram-infinity-datasource/img/icon.svg
+    access: proxy
+    url: "http://host.containers.internal:3001"

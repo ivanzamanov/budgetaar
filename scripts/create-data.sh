@@ -17,9 +17,4 @@ create table raw_data as select * from read_csv('$INPUT_FILE', header = true);
 EOF
 
 duckdb $DATABASE < $SCRIPTS/parse-raw-data.sql
-
-echo "Export data to dir $ASSETS_DIR"
-duckdb $DATABASE <<EOF
-copy monthly_aggregate to '$ASSETS_DIR/monthly.json' (ARRAY);
-EOF
 )

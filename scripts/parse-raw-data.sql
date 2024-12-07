@@ -1,7 +1,6 @@
 -- drop sequence if exists raw_transaction_id;
 -- drop sequence if exists transaction_id;
 -- drop table if exists transactions;
--- drop table if exists monthly_aggregate;
 -- drop table if exists raw_transactions;
 
 create sequence if not exists raw_transaction_id;
@@ -60,17 +59,3 @@ truncate raw_transactions;
 create table if not exists non_spend_transactions (
     reference varchar not null primary key
 );
-
-create or replace table monthly_aggregate as
-select
-    date_trunc('month', datetime) as date,
-    sum(outflow) as outflow,
-    sum(inflow) as inflow,
-    sum(inflow) - sum(outflow) as net_gain,
-    (
-        select sum(inflow) - sum(outflow) from transactions t where t.datetime + interval '1 month' < date
-    ) as total
-from transactions t
-where datetime >= '2022-09-06'
-and not exists (select * from non_spend_transactions nst where nst.reference = t.reference)
-group by date order by date asc;

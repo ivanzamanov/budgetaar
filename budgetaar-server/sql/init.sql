@@ -16,8 +16,21 @@ create table if not exists transactions (
 
 create table if not exists ibans (
     iban varchar not null primary key,
-    description varchar
+    description varchar,
+    is_family boolean default false
 );
+
+insert or ignore into ibans (iban, description, is_family) values
+('BG78BUIN95611000608425', 'Иван разплащателна', true),
+('BG21FINV91501004361513', 'Марина ПИБ', true),
+('BG92BUIN95611000695279', 'Обща разплащателна', true),
+('BG44BUIN95614000720097', 'Обща спестовна', true),
+('BG20STSA93000004099823', 'Доброволен Пенсионен Фонд Алианц България', false),
+('SK6111000000002945045506', 'Wealth Effect Management', false),
+('DE43501108006161538126', 'Interactive Brokers', false),
+('DE72501108006231412815', 'Interactive Brokers', false),
+('BG03FINV91502016974616', 'Гараж - Лъчезар Чамбов', false),
+('BG76STSA93000021268009', 'Николай Дойчинов', false);
 
 create table if not exists major_events (
     datetime timestamp not null,
@@ -26,18 +39,6 @@ create table if not exists major_events (
 
     unique (datetime, description)
 );
-
-insert or ignore into ibans (iban, description) values
-('BG78BUIN95611000608425', 'Иван разплащателна'),
-('BG21FINV91501004361513', 'Марина ПИБ'),
-('BG92BUIN95611000695279', 'Обща разплащателна'),
-('BG44BUIN95614000720097', 'Обща спестовна'),
-('BG20STSA93000004099823', 'Доброволен Пенсионен Фонд Алианц България'),
-('SK6111000000002945045506', 'Wealth Effect Management'),
-('DE43501108006161538126', 'Interactive Brokers'),
-('DE72501108006231412815', 'Interactive Brokers'),
-('BG03FINV91502016974616', 'Гараж - Лъчезар Чамбов'),
-('BG76STSA93000021268009', 'Николай Дойчинов');
 
 insert or replace into major_events (datetime, outflow, description) values
 ('2024-07-01', 1000, 'Банско'),

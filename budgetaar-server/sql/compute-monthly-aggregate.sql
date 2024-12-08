@@ -17,7 +17,7 @@ select
         select sum(inflow) - sum(outflow) from transactions t where t.datetime + interval '1 month' < date
     ) as total
     from transactions t
-where datetime >= '2022-01-06'
+where datetime >= ?4::DATE AND datetime <= ?5::DATE
 and ((select count(*) from ibans_param) = 0 or t.iban in (SELECT * FROM ibans_param))
 and ((select count(*) from streams_param) = 0 or t.stream in (SELECT * FROM streams_param))
 and not exists (select * from ibans i where i.iban = t.counterparty_iban)

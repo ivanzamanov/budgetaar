@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -11,7 +12,7 @@ fn open_connection() -> Connection {
 }
 
 pub fn rebuild() -> anyhow::Result<()> {
-    fs::remove_file("../data.db")?;
+    let _ = fs::remove_file("../data.db");
     let conn = open_connection();
 
     prepare_schema(&conn)?;
@@ -140,6 +141,8 @@ pub struct MonthlySpend {
 }
 
 pub fn get_monthly_spend(
+    from: Option<String>,
+    to: Option<String>,
     ibans: Option<String>,
     streams: Option<String>,
     subtract_major_events: bool,
@@ -148,15 +151,18 @@ pub fn get_monthly_spend(
 
     Ok(conn
         .prepare(include_str!("../sql/compute-monthly-aggregate.sql"))?
-        .query_map(params![ibans, streams, subtract_major_events], |row| {
-            Ok(MonthlySpend {
-                date: row.get("date")?,
-                outflow: row.get("outflow")?,
-                inflow: row.get("inflow")?,
-                total: row.get("total")?,
-                events_outflow: row.get("events_outflow")?,
-            })
-        })?
+        .query_map(
+            params![ibans, streams, subtract_major_events, from, to],
+            |row| {
+                Ok(MonthlySpend {
+                    date: row.get("date")?,
+                    outflow: row.get("outflow")?,
+                    inflow: row.get("inflow")?,
+                    total: row.get("total")?,
+                    events_outflow: row.get("events_outflow")?,
+                })
+            },
+        )?
         .map(|r| r.unwrap())
         .collect::<Vec<MonthlySpend>>())
 }
@@ -207,4 +213,23 @@ mod tests {
             Some("SK6111000000002945045506".to_owned())
         );
     }
+}
+
+pub fn get_stream_breakdown(
+    from: Option<String>,
+    to: Option<String>,
+    ibans: Option<String>
+) -> anyhow::Result<HashMap<String, f32>> {
+    let conn = open_connection();
+
+    let result: HashMap<String, f32> = conn
+        .prepare(include_str!("../sql/compute-stream-breakdown.sql"))?
+        .query_map(params![from, to, ibans], |row| {
+            let outflow: f32 = row.get("outflow")?;
+            let stream: String = row.get("stream")?;
+            Ok((stream, outflow))
+        })?
+        .map(|r| r.unwrap())
+        .collect();
+    Ok(result)
 }

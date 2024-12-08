@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::PathBuf;
 
 use duckdb::params;
 use duckdb::Connection;
@@ -55,29 +56,62 @@ fn update_counterparty_ibans(conn: &Connection) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn read_statement_allianz(conn: &Connection, file_path: PathBuf) -> anyhow::Result<()> {
+    let path_str = file_path.to_str().unwrap();
+    tracing::info!("Reading {}", path_str);
+
+    let iban = file_path
+        .file_stem()
+        .and_then(|n| n.to_str())
+        .unwrap()
+        .split_whitespace()
+        .find(|part| part.parse::<Iban>().is_ok())
+        .expect("Could not find IBAN in file name");
+
+    tracing::info!("Inferred IBAN: {}", iban);
+
+    conn.execute(
+        include_str!("../sql/read-statement-allianz.sql"),
+        params![path_str, iban],
+    )?;
+
+    tracing::info!("Done");
+    Ok(())
+}
+
+fn read_statement_fib(conn: &Connection, file_path: PathBuf) -> anyhow::Result<()> {
+    let path_str = file_path.to_str().unwrap();
+    tracing::info!("Reading {}", path_str);
+
+    let iban = file_path
+        .file_stem()
+        .and_then(|n| n.to_str())
+        .unwrap()
+        .split('-')
+        .find(|part| part.parse::<Iban>().is_ok())
+        .expect("Could not find IBAN in file name");
+
+    tracing::info!("Inferred IBAN: {}", iban);
+
+    conn.execute(
+        include_str!("../sql/read-statement-fib.sql"),
+        params![path_str, iban],
+    )?;
+
+    tracing::info!("Done");
+    Ok(())
+}
+
 fn read_statements(conn: &Connection) -> anyhow::Result<()> {
-    let read_dir = std::fs::read_dir("../statements")?;
+    let read_dir = std::fs::read_dir("../statements/allianz")?;
     for file in read_dir.into_iter() {
         let file_path = file?.path();
-        let path_str = file_path.to_str().unwrap();
-        println!("Reading {}", path_str);
-
-        let iban = file_path
-            .file_stem()
-            .and_then(|n| n.to_str())
-            .unwrap()
-            .split_whitespace()
-            .find(|part| part.parse::<Iban>().is_ok())
-            .expect("Could not find IBAN in file name");
-
-        println!("Inferred IBAN: {}", iban);
-
-        conn.execute(
-            include_str!("../sql/transactions-from-raw-data.sql"),
-            params![path_str, iban],
-        )?;
-
-        println!("Done");
+        read_statement_allianz(conn, file_path)?;
+    }
+    let read_dir = std::fs::read_dir("../statements/fib")?;
+    for file in read_dir.into_iter() {
+        let file_path = file?.path();
+        read_statement_fib(conn, file_path)?;
     }
     Ok(())
 }
@@ -105,7 +139,11 @@ pub struct MonthlySpend {
     events_outflow: f32,
 }
 
-pub fn get_monthly_spend(ibans: Option<String>, streams: Option<String>, subtract_major_events: bool) -> anyhow::Result<Vec<MonthlySpend>> {
+pub fn get_monthly_spend(
+    ibans: Option<String>,
+    streams: Option<String>,
+    subtract_major_events: bool,
+) -> anyhow::Result<Vec<MonthlySpend>> {
     let conn = open_connection();
 
     Ok(conn
@@ -124,8 +162,14 @@ pub fn get_monthly_spend(ibans: Option<String>, streams: Option<String>, subtrac
 }
 
 #[derive(Serialize)]
+pub struct IbanDescription {
+    iban: String,
+    description: String,
+}
+
+#[derive(Serialize)]
 pub struct AvailableFilters {
-    ibans: Vec<String>,
+    ibans: Vec<IbanDescription>,
     streams: Vec<String>,
 }
 
@@ -134,9 +178,14 @@ pub fn get_available_filters() -> anyhow::Result<AvailableFilters> {
 
     let ibans = conn
         .prepare("select * from ibans where is_family = true;")?
-        .query_map([], |row| Ok(row.get("iban")?))?
+        .query_map([], |row| {
+            Ok(IbanDescription {
+                iban: row.get("iban")?,
+                description: row.get("description")?,
+            })
+        })?
         .map(|r| r.unwrap())
-        .collect::<Vec<String>>();
+        .collect::<Vec<IbanDescription>>();
 
     let streams = conn
         .prepare("select distinct stream from transactions where stream is not null;")?

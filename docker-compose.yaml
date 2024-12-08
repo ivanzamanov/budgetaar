@@ -1,0 +1,14 @@
+version: "3.1"
+services:
+  grafana:
+    container_name: grafana
+    image: grafana/grafana
+    platform: linux/amd64
+    restart: never
+    environment:
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana-config/grafana.ini:/etc/grafana/grafana.ini
+      - ./grafana-config/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml

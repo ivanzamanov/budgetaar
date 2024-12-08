@@ -14,7 +14,8 @@ mod api;
 #[tokio::main]
 async fn main() {
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
+        .compact()
+        .with_max_level(Level::INFO)
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("Could not configure tracing");
 
@@ -28,7 +29,7 @@ async fn main() {
 
     let address = "0.0.0.0:3001";
     let listener = tokio::net::TcpListener::bind(address).await.unwrap();
-    println!("Listening on {}", address);
+    tracing::info!("Listening on {}", address);
     axum::serve(listener, app).await.unwrap();
 }
 

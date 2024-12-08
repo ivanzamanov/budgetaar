@@ -1,6 +1,9 @@
 with
-ibans_param as (
+iban_descriptions as (
     select regexp_split_to_table(?1, ',')
+),
+ibans_param as (
+    select iban from ibans where description in (select * from iban_descriptions)
 ),
 streams_param as (
     select regexp_split_to_table(?2, ',')

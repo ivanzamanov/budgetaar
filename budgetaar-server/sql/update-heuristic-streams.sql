@@ -147,3 +147,5 @@ and (
     description ilike '%GIFTTUBE%' or
     description ilike '%STEFKOS MYUZIK%'
 );
+
+update transactions t set stream = 'unknown' where stream is null;

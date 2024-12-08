@@ -1,4 +1,4 @@
-use api::{AvailableFilters, MonthlySpend};
+use api::{AvailableFilters, MonthlySpend, TransactionEntry};
 use axum::{extract::Query, routing::get, Json, Router};
 use serde::*;
 use tower_http::trace::TraceLayer;
@@ -19,6 +19,7 @@ async fn main() {
         .route("/api/monthly-spend", get(monthly_spend))
         .route("/api/available-filters", get(available_filters))
         .route("/api/stream-breakdown", get(stream_breakdown))
+        .route("/api/list-transactions", get(list_transactions))
         .layer(TraceLayer::new_for_http());
 
     api::rebuild().unwrap();
@@ -84,6 +85,23 @@ async fn stream_breakdown(
     let interval = time.0;
     let ibans = to_csv_list(query.ibans.clone());
     Json(api::get_stream_breakdown(interval.from, interval.to, ibans).unwrap())
+}
+
+#[derive(Deserialize, Debug)]
+struct ListTransactionsParams {
+    ibans: Option<String>,
+    streams: Option<String>,
+}
+
+async fn list_transactions(
+    query: Query<ListTransactionsParams>,
+    time: Query<TimeInterval>,
+) -> Json<Vec<TransactionEntry>> {
+    let interval = time.0;
+    let ibans = to_csv_list(query.ibans.clone());
+    let streams = to_csv_list(query.streams.clone());
+
+    Json(api::list_transactions(interval.from, interval.to, ibans, streams).unwrap())
 }
 
 fn to_csv_list(str: Option<String>) -> Option<String> {

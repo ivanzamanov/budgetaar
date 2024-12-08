@@ -218,7 +218,7 @@ mod tests {
 pub fn get_stream_breakdown(
     from: Option<String>,
     to: Option<String>,
-    ibans: Option<String>
+    ibans: Option<String>,
 ) -> anyhow::Result<HashMap<String, f32>> {
     let conn = open_connection();
 
@@ -228,6 +228,39 @@ pub fn get_stream_breakdown(
             let outflow: f32 = row.get("outflow")?;
             let stream: String = row.get("stream")?;
             Ok((stream, outflow))
+        })?
+        .map(|r| r.unwrap())
+        .collect();
+    Ok(result)
+}
+
+#[derive(Serialize)]
+pub struct TransactionEntry {
+    datetime: String,
+    inflow: f32,
+    outflow: f32,
+    description: String,
+    stream: String,
+}
+
+pub fn list_transactions(
+    from: Option<String>,
+    to: Option<String>,
+    ibans: Option<String>,
+    streams: Option<String>,
+) -> anyhow::Result<Vec<TransactionEntry>> {
+    let conn = open_connection();
+
+    let result: Vec<TransactionEntry> = conn
+        .prepare(include_str!("../sql/list-transactions.sql"))?
+        .query_map(params![from, to, ibans, streams], |row| {
+            Ok(TransactionEntry {
+                datetime: row.get("datetime")?,
+                description: row.get("description")?,
+                inflow: row.get("inflow")?,
+                outflow: row.get("outflow")?,
+                stream: row.get("stream")?,
+            })
         })?
         .map(|r| r.unwrap())
         .collect();
